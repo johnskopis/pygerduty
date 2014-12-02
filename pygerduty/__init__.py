@@ -353,7 +353,71 @@ class Container(object):
         return json_dict
 
 
+class LogEntries(Collection):
+    def __init__(self, *args, **kwargs):
+        Collection.__init__(self, *args, **kwargs)
+
+        def factory(*args, **kwargs):
+            logentry_type = _upper(kwargs['type']) + "LogEntry"
+            try:
+                new = globals()[logentry_type](*args, **kwargs)
+            except:
+                new = LogEntry(*args, **kwargs)
+
+            return new
+
+        self.container = factory
+
+
+class LogEntry(Container):
+    def __init__(self, *args, **kwargs):
+        Container.__init__(self, *args, **kwargs)
+        self.parent = self.collection.base_container
+
+
+class TriggerLogEntry(LogEntry):
+    pass
+
+
+class AssignLogEntry(LogEntry):
+    def __init__(self, *args, **kwargs):
+        kwargs[Container.ATTR_NAME_OVERRIDE_KEY] = {"assigned_user": u"user"}
+        LogEntry.__init__(self, *args, **kwargs)
+
+
+class NotifyLogEntry(LogEntry):
+    pass
+
+
+class EscalateLogEntry(LogEntry):
+    def __init__(self, *args, **kwargs):
+        kwargs[Container.ATTR_NAME_OVERRIDE_KEY] = {"assigned_user": u"user"}
+        LogEntry.__init__(self, *args, **kwargs)
+
+
+class AcknowledgeLogEntry(LogEntry):
+    def __init__(self, *args, **kwargs):
+        kwargs[Container.ATTR_NAME_OVERRIDE_KEY] = {"agent": u"user"}
+        LogEntry.__init__(self, *args, **kwargs)
+
+
+class UnacknowledgeLogEntry(LogEntry):
+    def __init__(self, *args, **kwargs):
+        kwargs[Container.ATTR_NAME_OVERRIDE_KEY] = {"agent": u"user"}
+        LogEntry.__init__(self, *args, **kwargs)
+
+
+class ResolveLogEntry(LogEntry):
+    def __init__(self, *args, **kwargs):
+        kwargs[Container.ATTR_NAME_OVERRIDE_KEY] = {"agent": u"user"}
+        LogEntry.__init__(self, *args, **kwargs)
+
+
 class Incident(Container):
+    def __init__(self, *args, **kwargs):
+        Container.__init__(self, *args, **kwargs)
+        self.log_entries = LogEntries(self.pagerduty, base_container=self)
+
     def _do_action(self, verb, requester_id, **kwargs):
         path = '%s/%s/%s' % (self.collection.name, self.id, verb)
         data = {'requester_id': requester_id}
@@ -374,7 +438,6 @@ class Incident(Container):
         if not user_ids:
             raise Error('Must pass at least one user id')
         self._do_action('reassign', requester_id=requester_id, assigned_to_user=','.join(user_ids))
-
 
 class Alert(Container):
     pass
